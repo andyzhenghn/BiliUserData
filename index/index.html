@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    .container {
+      padding-top: 30px;
+    }
+
+    .container-header {
+      line-height: 30px;
+    }
+
+    .container-content {
+      width: 100%;
+      height: 400px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="container-header">性别</div>
+    <div id="genderPie" class="container-content"></div>
+  </div>
+  <div class="container">
+    <div class="container-header">等级（活跃度）</div>
+    <div id="levelPie" class="container-content"></div>
+    <div id="levelBar" class="container-content"></div>
+  </div>
+  <div class="container">
+    <div class="container-header">粉丝</div>
+    <div id="fansPie" class="container-content"></div>
+    <div id="fansBar" class="container-content"></div>
+  </div>
+  <div class="container">
+    <div class="container-header">分区统计</div>
+    <div id="categoryBar" class="container-content"></div>
+  </div>
+
+  <script src="./assets/echarts.min.js"></script>
+  <script src="./mock/bilibili_user_info.js"></script>
+  <script>
+    class MyChart {
+      constructor(id, chartType = 'pie') {
+        this.id = id;
+        this.chart = null;
+        this.chartType = chartType;
+      }
+
+      initChart() {
+        this.chart = echarts.init(document.getElementById(this.id));
+        this.generateChart();
+      }
+
+      dataHandler() {
+        const fnMap = {
+          genderPie: this.handlePieData.bind(this, 'sex', data),
+          levelPie: this.handlePieData.bind(this, 'level', data),
+          fansPie: this.handleFansPieData.bind(this),
+          levelBar: this.handleBarData.bind(this, 'level', data),
+          fansBar: this.handleFansBarData.bind(this),
+          categoryBar: this.handleCategoryBarData.bind(this, 'sex', data),
+        }
+        return fnMap[this.id]();
+      }
+
+      handlePieData(keyword, paramsData = []) {
+        let seriesData = this.formateNormalData(keyword, paramsData);
+        const legendData = seriesData.map(_ => _.name);
+
+        return {
+          seriesData,
+          legendData,
+          xAxisData: null,
+        };
+      }
+
+      handleBarData(keyword, paramsData = []) {
+        const seriesData = this.formateNormalData(keyword, paramsData);
+        let xAxisData = seriesData.map(_ => _.name);
+
+        return {
+          seriesData,
+          legendData: null,
+          xAxisData,
+        };
+      }
+
+      formateNormalData(keyword, paramsData = []) {
+        return paramsData.reduce((acc, cv) => {
+          const k = cv[keyword];
+          const item = acc.find(_ => _.name === k);
+          item
+            ? item.value++
+            : acc.push({
+              value: 1,
+              name: k,
+            });
+          return acc;
+        }, []);
+      }
+
+      formateFansData() {
+        const lenMap = {
+          1: '个级',
+          2: '十级',
+          3: '百级',
+          4: '千级',
+          5: '万级',
+          6: '十万级',
+          7: '百万级',
+          8: '千万级',
+          9: '亿级',
+        };
+
+        const handleNum = (strNum = '') => !+strNum
+          ? '无'
+          : lenMap[strNum.split('.')[0].length];
+
+        return data.map(_ => ({
+          ..._,
+          fans: handleNum(_.fans),
+        }));
+      }
+
+      handleFansPieData() {
+        return this.handlePieData('fans', this.formateFansData());
+      }
+
+      handleFansBarData() {
+        return this.handleBarData('fans', this.formateFansData())
+      }
+
+      handleCategoryBarData() {
+        const originData = data.map(_ => ({
+          ..._,
+          category_str: _.category_str.split(',')
+        }));
+        const xAxisData = [...new Set(originData
+          .reduce((acc, cv) => acc.concat(cv['category_str']), [])
+        )]
+          .filter(Boolean);
+        const seriesData = xAxisData.map(_ => ({
+          name: _,
+          value: 0,
+        }));
+
+        originData.forEach(_ => {
+          _['category_str'].forEach(c => {
+            const item = seriesData.find(a => a.name === c);
+            item && item.value++;
+          });
+        });
+
+        return {
+          seriesData,
+          legendData: null,
+          xAxisData,
+        };
+      }
+
+      generateChart() {
+        const {
+          legendData, seriesData, xAxisData
+        } = this.dataHandler();
+        this.setOptionHandler(legendData, seriesData, xAxisData);
+      }
+
+      setOptionHandler(legendData, seriesData, xAxisData) {
+        const common = {
+          toolbox: {
+            feature: {
+              saveAsImage: {
+                name: this.id,
+                backgroundColor: 'transparent',
+              },
+            },
+          },
+        };
+        const options = this.chartType === 'pie' ? {
+          tooltip: {
+            trigger: 'item',
+            formatter: '{a} <br/>{b} : {c} ({d}%)'
+          },
+          legend: {
+            data: legendData
+          },
+          series: [
+            {
+              name: 'pie',
+              type: 'pie',
+              radius: '55%',
+              center: ['50%', '60%'],
+              data: seriesData,
+              label: {
+                show: true,
+                formatter: '{b}: ({d}%)'
+              },
+              emphasis: {
+                itemStyle: {
+                  shadowBlur: 10,
+                  shadowOffsetX: 0,
+                  shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+              }
+            }
+          ]
+        } : {
+            tooltip: {
+              trigger: 'item',
+            },
+            xAxis: {
+              type: 'category',
+              data: xAxisData,
+            },
+            yAxis: {
+              type: 'value'
+            },
+            series: [{
+              data: seriesData,
+              type: 'bar',
+              label: {
+                show: true,
+                formatter: '{c}'
+              },
+            }]
+          };
+
+        this.chart.setOption({
+          ...common,
+          ...options
+        });
+      }
+    }
+
+    const idArr = [
+      {
+        id: 'genderPie',
+        type: 'pie',
+      },
+      {
+        id: 'levelPie',
+        type: 'pie',
+      },
+      {
+        id: 'fansPie',
+        type: 'pie',
+      },
+      {
+        id: 'levelBar',
+        type: 'bar',
+      },
+      {
+        id: 'fansBar',
+        type: 'bar',
+      },
+      {
+        id: 'categoryBar',
+        type: 'bar',
+      },
+    ];
+
+    idArr.forEach(_ => {
+      _.chart = new MyChart(_.id, _.type);
+      _.chart.initChart();
+    });
+  </script>
+</body>
+
+</html>
