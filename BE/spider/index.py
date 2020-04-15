@@ -12,10 +12,9 @@ true = ''
 
 logging.basicConfig(
     level=logging.INFO,
-    handlers=[logging.FileHandler(filename='bili-user-spider.log', mode='a', encoding='utf-8'
-),
-logging.StreamHandler(sys.stdout)],
-format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handlers=[logging.FileHandler(filename='bili-user-spider.log', mode='a', encoding='utf-8'),
+              logging.StreamHandler(sys.stdout)],
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 cookie = {
     'domain': '/',
@@ -75,8 +74,8 @@ def run(url):
         r = requests.get(url, headers=head, cookies=cookie, timeout=10).text
         if r.find("name\":") == -1:
             return
-        name = r[r.find("name\":") + 7 : r.find('\",\"sex\"')]
-        sex = r[r.find('\"sex\":\"') + 7 : r.find('\",\"face')]
+        name = r[r.find("name\":") + 7: r.find('\",\"sex\"')]
+        sex = r[r.find('\"sex\":\"') + 7: r.find('\",\"face')]
         if r.find('ic_userlevel_0') != -1:
             level = 0
         elif r.find('ic_userlevel_1') != -1:
@@ -106,15 +105,16 @@ def run(url):
             'Referer': url
         }
         res1 = requests.get(
-            'https://api.bilibili.com/x/relation/stat?jsonp=jsonp&vmid=' + str(mid),
-            headers = head,
-            cookies = cookie,
+            'https://api.bilibili.com/x/relation/stat?jsonp=jsonp&vmid=' +
+            str(mid),
+            headers=head,
+            cookies=cookie,
             timeout=10
         ).text
         res2 = requests.get(
             'https://api.bilibili.com/x/space/upstat?mid=' + str(mid),
-            headers = head,
-            cookies = cookie,
+            headers=head,
+            cookies=cookie,
             timeout=10
         ).text
         # res3 = requests.get(
@@ -124,9 +124,10 @@ def run(url):
         #     timeout=10
         # ).text
         res4 = requests.get(
-            'https://api.bilibili.com/x/space/arc/search?pn=1&ps=100&order=click&keyword=&mid=' + str(mid),
-            headers = head,
-            cookies = cookie,
+            'https://api.bilibili.com/x/space/arc/search?pn=1&ps=100&order=click&keyword=&mid=' +
+            str(mid),
+            headers=head,
+            cookies=cookie,
             timeout=10
         ).text
 
@@ -151,7 +152,7 @@ def run(url):
         if category:
             for v in category.values():
                 if (categoryStr.find(v['name']) == -1):
-                    categoryStr = categoryStr + v['name']+ ','
+                    categoryStr = categoryStr + v['name'] + ','
 
         users = (
             total,
@@ -191,6 +192,7 @@ def save(result=()):
         logging.error("error in save: " + str(e))
         conn.rollback()
     conn.commit()
+
 
 if __name__ == "__main__":
     create()
